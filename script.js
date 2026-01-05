@@ -8,7 +8,7 @@ const aiModels = {
     gemini:   { name: "Gemini Pro" },
     Chatgpt:  { name: "ChatGPT" },
     deepseek: { name: "DeepSeek" },
-    perplexity: { name: "Perplexity" }
+    claude: { name: "claude" }
 };
 
 let attachedImage = null; // { base64, mimeType }
@@ -364,4 +364,5 @@ document.addEventListener("DOMContentLoaded", () => {
         loginHeroOrb.addEventListener("keypress", triggerModalOrb);
     }
 });
+
 
