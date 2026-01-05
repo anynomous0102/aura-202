@@ -1,7 +1,7 @@
 // ===== CONFIG: GEMINI API =====
 // 1. Get a new key here: https://aistudio.google.com/
 // 2. Paste it below inside the quotes.
-const GEMINI_API_KEY = "AIzaSyBMv18vmxxJkwGrBwTJUWzX7ta04S3UKus"; 
+const GEMINI_API_KEY = ""; 
 
 // Note: "gemini-1.5-flash" is the current standard stable version.
 const GEMINI_MODEL_TEXT = "gemini-1.5-flash"; 
@@ -416,4 +416,5 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 });
+
 
