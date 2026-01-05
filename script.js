@@ -1,6 +1,10 @@
 // ===== CONFIG: GEMINI API =====
-const GEMINI_API_KEY = "AIzaSyClk2OFt27MJLGdPMz3DnnruBz1IEDlHf0"; // <-- put your key here
-const GEMINI_MODEL_TEXT = "gemini-2.5-flash";
+// 1. Get a new key here: https://aistudio.google.com/
+// 2. Paste it below inside the quotes.
+const GEMINI_API_KEY = "AIzaSyClk2OFt27MJLGdPMz3DnnruBz1IEDlHf0"; 
+
+// Note: "gemini-1.5-flash" is the current standard stable version.
+const GEMINI_MODEL_TEXT = "gemini-1.5-flash"; 
 const GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta";
 
 // Logical AIs, all powered by Gemini
@@ -19,8 +23,11 @@ function showLoginStep(step) {
     document.getElementById('login-step-2').classList.toggle('hidden', step !== 2);
 }
 function showLoginModal() {
-    document.getElementById('login-overlay').classList.remove('hidden');
-    showLoginStep(1);
+    const overlay = document.getElementById('login-overlay');
+    if(overlay) {
+        overlay.classList.remove('hidden');
+        showLoginStep(1);
+    }
 }
 function closeLoginModal(event) {
     if (event) event.preventDefault();
@@ -63,10 +70,11 @@ function typewriter(element, text, speed = 15) {
 
 // --- GEMINI CALL (TEXT + OPTIONAL IMAGE) ---
 async function callGemini(prompt, aiName, options = {}) {
-    const { imageData, imageMode } = options;
+    // REMOVED imageMode from here
+    const { imageData } = options;
 
-    if (!GEMINI_API_KEY || GEMINI_API_KEY === "YOUR_GEMINI_API_KEY_HERE") {
-        throw new Error("Set your Gemini API key in script.js");
+    if (!GEMINI_API_KEY || GEMINI_API_KEY === "INSERT_YOUR_NEW_KEY_HERE" || GEMINI_API_KEY.includes("YOUR_GEMINI_API_KEY")) {
+        throw new Error("API Key Missing: Please open script.js and paste your new key in the GEMINI_API_KEY variable.");
     }
 
     const parts = [];
@@ -76,11 +84,7 @@ async function callGemini(prompt, aiName, options = {}) {
               `Answer clearly, safely and concisely in your own style.`
     });
 
-    if (imageMode) {
-        parts.push({
-            text: "The user wants an image for this request. Describe in detail what the generated image should look like, including style, composition, and colors."
-        });
-    }
+    // REMOVED the block that added image generation instructions
 
     parts.push({ text: prompt });
 
@@ -165,7 +169,7 @@ async function submitPrompt() {
     const resultsSection = document.getElementById("resultsSection");
     const header = document.getElementById("header");
     const contentWrapper = document.querySelector(".content-wrapper");
-    const imageModeCheckbox = document.getElementById("imageGenerationMode");
+    // REMOVED reference to imageModeCheckbox
 
     const selectedAIs = Array.from(
         document.querySelectorAll(".ai-checkbox input:checked")
@@ -188,7 +192,7 @@ async function submitPrompt() {
 
     submitBtn.disabled = true;
 
-    const imageMode = imageModeCheckbox.checked;
+    // REMOVED imageMode variable
     const imageData = attachedImage;
 
     selectedAIs.forEach(id => {
@@ -208,10 +212,11 @@ async function submitPrompt() {
                 `.results-pane[data-ai-id="${id}"] .response-content`
             );
             try {
-                const text = await callGemini(prompt, ai.name, { imageData, imageMode });
+                // Pass only imageData, no imageMode
+                const text = await callGemini(prompt, ai.name, { imageData });
                 typewriter(pane, text);
             } catch (err) {
-                pane.textContent = "Error: " + err.message;
+                pane.innerHTML = `<span style="color:red;">${err.message}</span>`;
             }
         })
     );
@@ -268,26 +273,32 @@ document.addEventListener("DOMContentLoaded", () => {
     setGreetingByTime();
 
     if (!localStorage.getItem("cookieConsent")) {
-        document.getElementById("cookie-consent-overlay").classList.remove("hidden");
+        const cookieOverlay = document.getElementById("cookie-consent-overlay");
+        if(cookieOverlay) cookieOverlay.classList.remove("hidden");
     } else {
         showLoginModal();
     }
 
     const container = document.querySelector(".ai-selection-container");
-    Object.keys(aiModels).forEach(id => {
-        const model = aiModels[id];
-        const div = document.createElement("div");
-        div.className = "ai-checkbox";
-        div.innerHTML = `
-            <input type="checkbox" id="${id}" checked>
-            <label for="${id}">${model.name}</label>
-        `;
-        container.appendChild(div);
-    });
+    if(container) {
+        Object.keys(aiModels).forEach(id => {
+            const model = aiModels[id];
+            const div = document.createElement("div");
+            div.className = "ai-checkbox";
+            div.innerHTML = `
+                <input type="checkbox" id="${id}" checked>
+                <label for="${id}">${model.name}</label>
+            `;
+            container.appendChild(div);
+        });
+    }
 
-    document.getElementById("promptInput").addEventListener("keypress", (e) => {
-        if (e.key === "Enter") submitPrompt();
-    });
+    const promptInput = document.getElementById("promptInput");
+    if(promptInput) {
+        promptInput.addEventListener("keypress", (e) => {
+            if (e.key === "Enter") submitPrompt();
+        });
+    }
 
     const attachmentBtn = document.getElementById("attachmentBtn");
     const uploadMenu = document.getElementById("upload-menu");
@@ -346,8 +357,10 @@ document.addEventListener("DOMContentLoaded", () => {
     if (loginOrb) {
         loginOrb.addEventListener("click", () => {
             const overlay = document.getElementById("login-overlay");
-            overlay.classList.remove("hidden");
-            showLoginStep(2);
+            if(overlay) {
+                overlay.classList.remove("hidden");
+                showLoginStep(2);
+            }
         });
     }
 
@@ -364,7 +377,3 @@ document.addEventListener("DOMContentLoaded", () => {
         loginHeroOrb.addEventListener("keypress", triggerModalOrb);
     }
 });
-
-
-
-
