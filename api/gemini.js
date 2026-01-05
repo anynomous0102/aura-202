@@ -15,8 +15,9 @@ export default async function handler(req, res) {
             return res.status(500).json({ error: "API key not configured" });
         }
 
+        // ✅ THE ONLY MODEL THAT WORKS FOR NEW KEYS
         const endpoint =
-            `https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key=${apiKey}`;
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.0-pro:generateContent?key=${apiKey}`;
 
         const response = await fetch(endpoint, {
             method: "POST",
@@ -40,11 +41,13 @@ export default async function handler(req, res) {
         }
 
         const text =
-            data.candidates?.[0]?.content?.parts?.[0]?.text ||
+            data.candidates?.[0]?.content?.parts?.[0]?.text ??
             "No response generated.";
 
-        res.status(200).json({ text });
+        return res.status(200).json({ text });
+
     } catch (err) {
-        res.status(500).json({ error: "Server error" });
+        console.error(err);
+        return res.status(500).json({ error: "Server error" });
     }
 }
