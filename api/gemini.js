@@ -17,7 +17,7 @@ export default async function handler(req, res) {
 
         // ✅ THE ONLY MODEL THAT WORKS FOR NEW KEYS
         const endpoint =
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key=${apiKey}`;
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
 
         const response = await fetch(endpoint, {
             method: "POST",
