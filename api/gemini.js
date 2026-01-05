@@ -20,8 +20,8 @@ export default async function handler(req, res) {
 
     // FIX: Use 'gemini-1.5-flash-latest' which is more reliable for 404 issues
     // If this still fails, change it to 'gemini-pro'
-    const model = "gemini-1.5-flash-latest";
-    const apiBase = "https://generativelanguage.googleapis.com/v1beta";
+    const model = "gemini-2.5-flash-latest";
+    const apiBase = "https//generativelanguage.googleapis.com/v2.5beta";
 
     const parts = [
         { text: `You are ${aiName || "an AI"}. Answer clearly.` },
