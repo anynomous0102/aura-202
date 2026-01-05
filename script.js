@@ -1,5 +1,5 @@
 // ===== CONFIG: GEMINI API =====
-const GEMINI_API_KEY = "AIzaSyBbzLmDzJJRpEOLn_3tSqphQsSS_iF0nck"; // <-- put your key here
+const GEMINI_API_KEY = "AIzaSyClk2OFt27MJLGdPMz3DnnruBz1IEDlHf0"; // <-- put your key here
 const GEMINI_MODEL_TEXT = "gemini-2.5-flash";
 const GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta";
 
@@ -364,6 +364,7 @@ document.addEventListener("DOMContentLoaded", () => {
         loginHeroOrb.addEventListener("keypress", triggerModalOrb);
     }
 });
+
 
 
 
