@@ -18,10 +18,10 @@ function loginUser() {
     localStorage.setItem(USER_STORAGE_KEY, "true");
     updateLoginUI();
     closeLoginModal();
+    alert("Logged In Successfully!");
 }
 
 function logoutUser() {
-    // Clear the storage and reload to reset the view
     localStorage.removeItem(USER_STORAGE_KEY);
     window.location.reload();
 }
@@ -31,24 +31,28 @@ function updateLoginUI() {
     if (!loginOrb) return;
 
     if (isUserLoggedIn()) {
+        // If logged in, turn the orb Green
         loginOrb.classList.add("logged-in");
         loginOrb.title = "Log Out";
-        // Visual indicator that user is logged in
-        loginOrb.style.boxShadow = "0 0 15px #4CAF50"; 
-        loginOrb.style.border = "2px solid #4CAF50";
+        loginOrb.style.background = "#4CAF50"; 
+        loginOrb.style.boxShadow = "0 0 15px #4CAF50";
     } else {
+        // If logged out, turn it back to normal
         loginOrb.classList.remove("logged-in");
         loginOrb.title = "Log In";
+        loginOrb.style.background = ""; 
         loginOrb.style.boxShadow = "";
-        loginOrb.style.border = "";
+        
+        // Force show modal if not logged in (Optional)
+        // showLoginModal(); 
     }
 }
 
 // --- MODAL LOGIC ---
 function showLoginModal() {
-    // If logged in, clicking the orb logs you out
+    // If user is logged in, clicking the orb asks to Logout
     if (isUserLoggedIn()) {
-        if(confirm("You are already logged in. Log out?")) {
+        if(confirm("You are currently logged in. Do you want to Log Out?")) {
             logoutUser();
         }
         return;
@@ -57,43 +61,40 @@ function showLoginModal() {
     const overlay = document.getElementById('login-overlay');
     if (overlay) {
         overlay.classList.remove('hidden');
-        // Reset to step 1 every time we open it
-        document.getElementById('login-step-1').classList.remove('hidden');
-        document.getElementById('login-step-2').classList.add('hidden');
+        showLoginStep(1);
     } else {
-        console.error("Login Overlay ID not found in HTML");
-        alert("Error: Login HTML missing");
+        alert("Login Overlay HTML is missing from index.html");
     }
 }
 
 function closeLoginModal(event) {
     if (event) event.preventDefault();
-    const overlay = document.getElementById('login-overlay');
-    if (overlay) overlay.classList.add('hidden');
+    document.getElementById('login-overlay').classList.add('hidden');
 }
 
 function showLoginStep(step) {
-    document.getElementById('login-step-1').classList.toggle('hidden', step !== 1);
-    document.getElementById('login-step-2').classList.toggle('hidden', step !== 2);
+    const s1 = document.getElementById('login-step-1');
+    const s2 = document.getElementById('login-step-2');
+    if(s1) s1.classList.toggle('hidden', step !== 1);
+    if(s2) s2.classList.toggle('hidden', step !== 2);
 }
 
-// --- GEMINI CALL (Backend Proxy) ---
+// --- GEMINI CALL (Backend) ---
 async function callGemini(prompt, aiName, options = {}) {
     const { imageData } = options;
-    const body = { prompt, aiName, imageData };
-
+    
+    // Call your Vercel API
     const res = await fetch('/api/gemini', {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body)
+        body: JSON.stringify({ prompt, aiName, imageData })
     });
 
     if (!res.ok) {
         const errData = await res.json();
-        // Parse the error clearly
-        let msg = errData.error;
-        if(typeof msg === 'object') msg = JSON.stringify(msg);
-        throw new Error(msg || "Server Error");
+        let errMsg = errData.error;
+        if (typeof errMsg === 'object') errMsg = JSON.stringify(errMsg);
+        throw new Error(errMsg || "Server Error");
     }
 
     const data = await res.json();
@@ -144,21 +145,26 @@ function createResultPane(aiId, aiName) {
     container.appendChild(pane);
 }
 
-// --- MAIN SUBMIT ---
+// --- SUBMIT ---
 async function submitPrompt() {
     const input = document.getElementById("promptInput");
     if (!input.value.trim()) return;
+
+    // Check login before allowing generation
+    if (!isUserLoggedIn()) {
+        alert("Please Log In first.");
+        showLoginModal();
+        return;
+    }
     
     document.body.classList.remove("initial-mode");
     const submitBtn = document.getElementById("submitBtn");
-    const resultsSection = document.getElementById("resultsSection");
     
     // UI Updates
     document.getElementById("header").classList.add("has-results");
     document.querySelector(".content-wrapper").classList.add("has-results");
-    resultsSection.style.display = "flex";
+    document.getElementById("resultsSection").style.display = "flex";
     
-    // Get Selected AIs
     const selectedAIs = Array.from(document.querySelectorAll(".ai-checkbox input:checked")).map(cb => cb.id);
     const tabs = document.getElementById("resultsTabs");
     const panes = document.getElementById("resultsPaneContainer");
@@ -194,18 +200,10 @@ async function submitPrompt() {
 
 // --- INIT ---
 document.addEventListener("DOMContentLoaded", () => {
+    // 1. Check Login State
     updateLoginUI();
 
-    // Check for cookie consent first
-    if (!localStorage.getItem("cookieConsent")) {
-        const cookie = document.getElementById("cookie-consent-overlay");
-        if(cookie) cookie.classList.remove("hidden");
-    } else {
-        // If not logged in, show login modal (Optional: Remove this if you don't want auto-popup)
-        if (!isUserLoggedIn()) showLoginModal();
-    }
-
-    // AI Checkboxes
+    // 2. Setup AI Checkboxes
     const container = document.querySelector(".ai-selection-container");
     if (container) {
         Object.keys(aiModels).forEach(id => {
@@ -216,32 +214,40 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // Event Listeners
+    // 3. Setup Listeners
     document.getElementById("promptInput")?.addEventListener("keypress", (e) => { if (e.key === "Enter") submitPrompt(); });
-    document.getElementById("loginOrb")?.addEventListener("click", showLoginModal);
     
-    // Login Modal Steps
-    document.getElementById("loginHeroOrb")?.addEventListener("click", () => showLoginStep(2));
-    
-    // Login Submit
-    const loginBtn = document.querySelector("#login-step-2 button");
-    if(loginBtn) loginBtn.addEventListener("click", (e) => { e.preventDefault(); loginUser(); });
+    // Login Orb Click
+    const loginOrb = document.getElementById("loginOrb");
+    if(loginOrb) loginOrb.addEventListener("click", showLoginModal);
 
-    // File Uploads
-    const imgInput = document.getElementById("imageInput");
-    if(imgInput) imgInput.addEventListener("change", () => {
-        const file = imgInput.files[0];
-        if(file) {
-            const reader = new FileReader();
-            reader.onload = () => {
-                attachedImage = { base64: reader.result.split(",")[1], mimeType: file.type };
-                document.getElementById("imagePreview").querySelector("img").src = reader.result;
-                document.getElementById("imagePreview").classList.add("visible");
-            };
-            reader.readAsDataURL(file);
-        }
+    // Step 1 Orb Click
+    const heroOrb = document.getElementById("loginHeroOrb");
+    if(heroOrb) heroOrb.addEventListener("click", () => showLoginStep(2));
+    
+    // Step 2 Button Click
+    const step2Btn = document.querySelector("#login-step-2 button");
+    if(step2Btn) step2Btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        loginUser();
     });
 
+    // Image Upload
+    const imgInput = document.getElementById("imageInput");
+    if(imgInput) {
+        imgInput.addEventListener("change", () => {
+            const file = imgInput.files[0];
+            if(file) {
+                const reader = new FileReader();
+                reader.onload = () => {
+                    attachedImage = { base64: reader.result.split(",")[1], mimeType: file.type };
+                    document.getElementById("imagePreview").querySelector("img").src = reader.result;
+                    document.getElementById("imagePreview").classList.add("visible");
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    }
     document.getElementById("uploadImageBtn")?.addEventListener("click", () => imgInput.click());
     document.getElementById("removeImageBtn")?.addEventListener("click", () => {
         attachedImage = null;
@@ -249,14 +255,14 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("imagePreview").classList.remove("visible");
     });
     
-    // Menu
+    // Menu Toggles
     document.getElementById("attachmentBtn")?.addEventListener("click", (e) => {
         e.stopPropagation();
         document.getElementById("upload-menu").classList.toggle("hidden");
     });
     window.addEventListener("click", () => document.getElementById("upload-menu")?.classList.add("hidden"));
     
-    // Hero Click
+    // Initial Hero Orb
     document.getElementById("auraOrb")?.addEventListener("click", () => {
         document.body.classList.remove("initial-mode");
         document.getElementById("promptInput").focus();
