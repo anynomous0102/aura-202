@@ -1,4 +1,6 @@
+// api/gemini.js
 export default async function handler(req, res) {
+    // CORS Headers
     res.setHeader('Access-Control-Allow-Credentials', true);
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
@@ -7,23 +9,18 @@ export default async function handler(req, res) {
         'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
     );
 
-    if (req.method === 'OPTIONS') {
-        res.status(200).end();
-        return;
-    }
+    if (req.method === 'OPTIONS') return res.status(200).end();
 
     const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) return res.status(500).json({ error: "Server API Key is missing." });
 
-    if (!apiKey) {
-        return res.status(500).json({ error: "Server API Key is missing." });
-    }
-
-    if (req.method !== 'POST') {
-        return res.status(405).json({ error: "Method not allowed" });
-    }
+    if (req.method !== 'POST') return res.status(405).json({ error: "Method not allowed" });
 
     const { prompt, aiName, imageData } = req.body;
-    const model = "gemini-1.5-flash"; 
+
+    // FIX: Use 'gemini-1.5-flash-latest' which is more reliable for 404 issues
+    // If this still fails, change it to 'gemini-pro'
+    const model = "gemini-1.5-flash-latest";
     const apiBase = "https://generativelanguage.googleapis.com/v1beta";
 
     const parts = [
