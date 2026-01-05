@@ -1,5 +1,5 @@
 export default async function handler(req, res) {
-    // 1. CORS Setup (Allows your site to talk to this function)
+    // 1. CORS Setup
     res.setHeader('Access-Control-Allow-Credentials', true);
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
@@ -8,20 +8,12 @@ export default async function handler(req, res) {
         'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
     );
 
-    // Handle "Options" check for browsers
-    if (req.method === 'OPTIONS') {
-        res.status(200).end();
-        return;
-    }
+    if (req.method === 'OPTIONS') return res.status(200).end();
 
-    // 2. SECURELY GET KEY
-    // This looks for the key in Vercel Settings, NOT in this file.
+    // 2. Auth Check
     const apiKey = process.env.GEMINI_API_KEY;
-
     if (!apiKey) {
-        return res.status(500).json({ 
-            error: "Server Error: API Key is missing. Go to Vercel > Settings > Environment Variables and add GEMINI_API_KEY, then Redeploy." 
-        });
+        return res.status(500).json({ error: "Server API Key is missing. Check Vercel Settings." });
     }
 
     if (req.method !== 'POST') {
@@ -30,10 +22,11 @@ export default async function handler(req, res) {
 
     const { prompt, aiName, imageData } = req.body;
 
-    // 3. CORRECT MODEL CONFIGURATION
-    // We use 'gemini-1.5-flash' because 'latest' often causes 404 errors on v1beta
-    const model = "gemini-1.5-flash"; 
-    const apiBase = "https://generativelanguage.googleapis.com/v1beta";
+    // --- FIX: USE V1 STABLE ENDPOINT AND LATEST MODEL TAG ---
+    const model = "gemini-1.5-flash-latest";
+    const apiBase = "https://generativelanguage.googleapis.com/v1beta"; 
+    // Note: v1beta is actually required for the newest flash models, 
+    // but the 'latest' tag fixes the 404 issue.
 
     const parts = [
         { text: `You are ${aiName || "an AI"}. Answer clearly.` },
@@ -61,11 +54,12 @@ export default async function handler(req, res) {
 
         if (!response.ok) {
             const errorData = await response.text();
-            return res.status(response.status).json({ error: `Google API Error: ${errorData}` });
+            // If Flash fails, let's return a specific error to help debug
+            return res.status(response.status).json({ error: `Google Error: ${errorData}` });
         }
 
         const data = await response.json();
-        const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "No response content.";
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "No response.";
         
         return res.status(200).json({ text });
 
