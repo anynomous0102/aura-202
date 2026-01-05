@@ -1,7 +1,7 @@
 // ===== CONFIG: GEMINI API =====
 // 1. Get a new key here: https://aistudio.google.com/
 // 2. Paste it below inside the quotes.
-const GEMINI_API_KEY = "AIzaSyClk2OFt27MJLGdPMz3DnnruBz1IEDlHf0"; 
+const GEMINI_API_KEY = ""; 
 
 // Note: "gemini-1.5-flash" is the current standard stable version.
 const GEMINI_MODEL_TEXT = "gemini-1.5-flash"; 
@@ -377,3 +377,4 @@ document.addEventListener("DOMContentLoaded", () => {
         loginHeroOrb.addEventListener("keypress", triggerModalOrb);
     }
 });
+
