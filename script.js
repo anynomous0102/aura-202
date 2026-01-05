@@ -69,21 +69,35 @@ function typewriter(element, text, speed = 15) {
 }
 
 // --- GEMINI CALL (TEXT + OPTIONAL IMAGE) ---
+// --- GEMINI CALL (Proxied via Vercel) ---
 async function callGemini(prompt, aiName, options = {}) {
-    // REMOVED imageMode from here
     const { imageData } = options;
 
-    if (!GEMINI_API_KEY || GEMINI_API_KEY === "INSERT_YOUR_NEW_KEY_HERE" || GEMINI_API_KEY.includes("YOUR_GEMINI_API_KEY")) {
-        throw new Error("API Key Missing: Please open script.js and paste your new key in the GEMINI_API_KEY variable.");
-    }
+    // We no longer need the API Key here! 
+    // We call our own backend instead.
+    
+    const body = {
+        prompt: prompt,
+        aiName: aiName,
+        imageData: imageData // This will be null if no image is attached
+    };
 
-    const parts = [];
-
-    parts.push({
-        text: `You are ${aiName}, but you are actually powered by Google's Gemini model. ` +
-              `Answer clearly, safely and concisely in your own style.`
+    const res = await fetch('/api/gemini', {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
     });
 
+    if (!res.ok) {
+        const errData = await res.json();
+        // If the error is an object, try to format it, otherwise print the message
+        const errMsg = typeof errData.error === 'string' ? errData.error : JSON.stringify(errData.error);
+        throw new Error(`Server Error: ${errMsg}`);
+    }
+
+    const data = await res.json();
+    return data.text;
+}
     // REMOVED the block that added image generation instructions
 
     parts.push({ text: prompt });
@@ -377,4 +391,5 @@ document.addEventListener("DOMContentLoaded", () => {
         loginHeroOrb.addEventListener("keypress", triggerModalOrb);
     }
 });
+
 
