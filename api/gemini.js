@@ -1,6 +1,5 @@
-// api/gemini.js
 export default async function handler(req, res) {
-    // CORS Headers
+    // 1. CORS Setup (Allows your site to talk to this function)
     res.setHeader('Access-Control-Allow-Credentials', true);
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
@@ -9,19 +8,32 @@ export default async function handler(req, res) {
         'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
     );
 
-    if (req.method === 'OPTIONS') return res.status(200).end();
+    // Handle "Options" check for browsers
+    if (req.method === 'OPTIONS') {
+        res.status(200).end();
+        return;
+    }
 
+    // 2. SECURELY GET KEY
+    // This looks for the key in Vercel Settings, NOT in this file.
     const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) return res.status(500).json({ error: "Server API Key is missing." });
 
-    if (req.method !== 'POST') return res.status(405).json({ error: "Method not allowed" });
+    if (!apiKey) {
+        return res.status(500).json({ 
+            error: "Server Error: API Key is missing. Go to Vercel > Settings > Environment Variables and add GEMINI_API_KEY, then Redeploy." 
+        });
+    }
+
+    if (req.method !== 'POST') {
+        return res.status(405).json({ error: "Method not allowed" });
+    }
 
     const { prompt, aiName, imageData } = req.body;
 
-    // FIX: Use 'gemini-1.5-flash-latest' which is more reliable for 404 issues
-    // If this still fails, change it to 'gemini-pro'
-    const model = "gemini-2.5-flash-latest";
-    const apiBase = "https//generativelanguage.googleapis.com/v2.5beta";
+    // 3. CORRECT MODEL CONFIGURATION
+    // We use 'gemini-1.5-flash' because 'latest' often causes 404 errors on v1beta
+    const model = "gemini-1.5-flash"; 
+    const apiBase = "https://generativelanguage.googleapis.com/v1beta";
 
     const parts = [
         { text: `You are ${aiName || "an AI"}. Answer clearly.` },
@@ -49,11 +61,12 @@ export default async function handler(req, res) {
 
         if (!response.ok) {
             const errorData = await response.text();
-            return res.status(response.status).json({ error: errorData });
+            return res.status(response.status).json({ error: `Google API Error: ${errorData}` });
         }
 
         const data = await response.json();
-        const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "No response.";
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "No response content.";
+        
         return res.status(200).json({ text });
 
     } catch (error) {
