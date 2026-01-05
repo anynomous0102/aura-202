@@ -4,7 +4,7 @@ export default async function handler(req, res) {
     }
 
     try {
-        const { prompt, imageData } = req.body;
+        const { prompt } = req.body;
 
         if (!prompt) {
             return res.status(400).json({ error: "Prompt is required" });
@@ -15,52 +15,36 @@ export default async function handler(req, res) {
             return res.status(500).json({ error: "API key not configured" });
         }
 
-        // ✅ USE v1 (NOT v1beta)
         const endpoint =
-            `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
-
-        const body = {
-            contents: [
-                {
-                    role: "user",
-                    parts: imageData
-                        ? [
-                              {
-                                  inlineData: {
-                                      mimeType: imageData.mimeType,
-                                      data: imageData.base64
-                                  }
-                              },
-                              { text: prompt }
-                          ]
-                        : [{ text: prompt }]
-                }
-            ]
-        };
+            `https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key=${apiKey}`;
 
         const response = await fetch(endpoint, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(body)
+            body: JSON.stringify({
+                contents: [
+                    {
+                        role: "user",
+                        parts: [{ text: prompt }]
+                    }
+                ]
+            })
         });
 
         const data = await response.json();
 
         if (!response.ok) {
-            console.error("Gemini API error:", data);
             return res.status(500).json({
                 error: data.error?.message || "Gemini API error"
             });
         }
 
         const text =
-            data.candidates?.[0]?.content?.parts?.[0]?.text ??
+            data.candidates?.[0]?.content?.parts?.[0]?.text ||
             "No response generated.";
 
-        return res.status(200).json({ text });
-
+        res.status(200).json({ text });
     } catch (err) {
-        console.error("Server error:", err);
-        return res.status(500).json({ error: "Server error" });
+        res.status(500).json({ error: "Server error" });
     }
 }
