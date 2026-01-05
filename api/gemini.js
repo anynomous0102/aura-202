@@ -15,11 +15,9 @@ export default async function handler(req, res) {
             return res.status(500).json({ error: "API key not configured" });
         }
 
-        // ✅ CORRECT MODEL (VERSIONED)
-        const MODEL = "gemini-1.5-flash-001";
-
+        // ✅ USE v1 (NOT v1beta)
         const endpoint =
-            `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${apiKey}`;
+            `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
 
         const body = {
             contents: [
@@ -60,6 +58,7 @@ export default async function handler(req, res) {
             "No response generated.";
 
         return res.status(200).json({ text });
+
     } catch (err) {
         console.error("Server error:", err);
         return res.status(500).json({ error: "Server error" });
