@@ -1,13 +1,7 @@
-// ===== CONFIG: GEMINI API =====
-// 1. Get a new key here: https://aistudio.google.com/
-// 2. Paste it below inside the quotes.
-const GEMINI_API_KEY = ""; 
+// ===== CONFIG =====
+// No API Key here! It is hidden in Vercel Settings.
 
-// Note: "gemini-1.5-flash" is the current standard stable version.
-const GEMINI_MODEL_TEXT = "gemini-1.5-flash"; 
-const GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta";
-
-// Logical AIs, all powered by Gemini
+// Logical AIs
 const aiModels = {
     gemini:   { name: "Gemini Pro" },
     Chatgpt:  { name: "ChatGPT" },
@@ -16,27 +10,73 @@ const aiModels = {
 };
 
 let attachedImage = null; // { base64, mimeType }
+const USER_STORAGE_KEY = "app_user_logged_in";
+
+// --- AUTHENTICATION LOGIC (Simulated) ---
+function isUserLoggedIn() {
+    return localStorage.getItem(USER_STORAGE_KEY) === "true";
+}
+
+function loginUser() {
+    localStorage.setItem(USER_STORAGE_KEY, "true");
+    updateLoginUI();
+    closeLoginModal();
+    alert("Logged in successfully!");
+}
+
+function logoutUser() {
+    if(confirm("Are you sure you want to log out?")) {
+        localStorage.removeItem(USER_STORAGE_KEY);
+        updateLoginUI();
+        window.location.reload();
+    }
+}
+
+function updateLoginUI() {
+    const loginOrb = document.getElementById("loginOrb");
+    if (!loginOrb) return;
+
+    if (isUserLoggedIn()) {
+        loginOrb.classList.add("logged-in");
+        loginOrb.title = "Click to Log Out";
+        loginOrb.style.background = "#4CAF50"; // Green when logged in
+        loginOrb.style.boxShadow = "0 0 15px #4CAF50";
+    } else {
+        loginOrb.classList.remove("logged-in");
+        loginOrb.title = "Log In";
+        loginOrb.style.background = ""; // Reset to default
+        loginOrb.style.boxShadow = "";
+    }
+}
 
 // --- MODAL LOGIC ---
 function showLoginStep(step) {
-    document.getElementById('login-step-1').classList.toggle('hidden', step !== 1);
-    document.getElementById('login-step-2').classList.toggle('hidden', step !== 2);
+    const step1 = document.getElementById('login-step-1');
+    const step2 = document.getElementById('login-step-2');
+    if (step1) step1.classList.toggle('hidden', step !== 1);
+    if (step2) step2.classList.toggle('hidden', step !== 2);
 }
+
 function showLoginModal() {
+    if (isUserLoggedIn()) {
+        logoutUser();
+        return;
+    }
     const overlay = document.getElementById('login-overlay');
     if(overlay) {
         overlay.classList.remove('hidden');
         showLoginStep(1);
     }
 }
+
 function closeLoginModal(event) {
     if (event) event.preventDefault();
     document.getElementById('login-overlay').classList.add('hidden');
 }
+
 function closeCookieModal(choice) {
     localStorage.setItem('cookieConsent', choice);
     document.getElementById('cookie-consent-overlay').classList.add('hidden');
-    showLoginModal();
 }
 
 // --- SIDEBAR & MENU LOGIC ---
@@ -68,20 +108,17 @@ function typewriter(element, text, speed = 15) {
     type();
 }
 
-// --- GEMINI CALL (TEXT + OPTIONAL IMAGE) ---
-// --- GEMINI CALL (Proxied via Vercel) ---
+// --- GEMINI CALL (SECURE VERCEL PROXY) ---
 async function callGemini(prompt, aiName, options = {}) {
     const { imageData } = options;
 
-    // We no longer need the API Key here! 
-    // We call our own backend instead.
-    
     const body = {
         prompt: prompt,
         aiName: aiName,
-        imageData: imageData // This will be null if no image is attached
+        imageData: imageData
     };
 
+    // Calls your Vercel backend
     const res = await fetch('/api/gemini', {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -90,50 +127,12 @@ async function callGemini(prompt, aiName, options = {}) {
 
     if (!res.ok) {
         const errData = await res.json();
-        // If the error is an object, try to format it, otherwise print the message
         const errMsg = typeof errData.error === 'string' ? errData.error : JSON.stringify(errData.error);
         throw new Error(`Server Error: ${errMsg}`);
     }
 
     const data = await res.json();
     return data.text;
-}
-    // REMOVED the block that added image generation instructions
-
-    parts.push({ text: prompt });
-
-    if (imageData) {
-        parts.push({
-            inlineData: {
-                mimeType: imageData.mimeType,
-                data: imageData.base64
-            }
-        });
-    }
-
-    const body = { contents: [ { parts } ] };
-
-    const res = await fetch(
-        `${GEMINI_API_BASE}/models/${GEMINI_MODEL_TEXT}:generateContent?key=${encodeURIComponent(GEMINI_API_KEY)}`,
-        {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(body)
-        }
-    );
-
-    if (!res.ok) {
-        const errText = await res.text();
-        throw new Error(`Gemini API error: ${res.status} ${errText}`);
-    }
-
-    const data = await res.json();
-    const candidate = data.candidates && data.candidates[0];
-    if (!candidate || !candidate.content || !candidate.content.parts) {
-        throw new Error("No content returned from Gemini.");
-    }
-
-    return candidate.content.parts.map(p => p.text || "").join("");
 }
 
 // --- TABS ---
@@ -183,7 +182,6 @@ async function submitPrompt() {
     const resultsSection = document.getElementById("resultsSection");
     const header = document.getElementById("header");
     const contentWrapper = document.querySelector(".content-wrapper");
-    // REMOVED reference to imageModeCheckbox
 
     const selectedAIs = Array.from(
         document.querySelectorAll(".ai-checkbox input:checked")
@@ -206,7 +204,6 @@ async function submitPrompt() {
 
     submitBtn.disabled = true;
 
-    // REMOVED imageMode variable
     const imageData = attachedImage;
 
     selectedAIs.forEach(id => {
@@ -226,7 +223,6 @@ async function submitPrompt() {
                 `.results-pane[data-ai-id="${id}"] .response-content`
             );
             try {
-                // Pass only imageData, no imageMode
                 const text = await callGemini(prompt, ai.name, { imageData });
                 typewriter(pane, text);
             } catch (err) {
@@ -285,12 +281,11 @@ function activateApp() {
 // --- INITIALIZATION ---
 document.addEventListener("DOMContentLoaded", () => {
     setGreetingByTime();
+    updateLoginUI();
 
     if (!localStorage.getItem("cookieConsent")) {
         const cookieOverlay = document.getElementById("cookie-consent-overlay");
         if(cookieOverlay) cookieOverlay.classList.remove("hidden");
-    } else {
-        showLoginModal();
     }
 
     const container = document.querySelector(".ai-selection-container");
@@ -314,6 +309,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
+    // Attachment Menu
     const attachmentBtn = document.getElementById("attachmentBtn");
     const uploadMenu = document.getElementById("upload-menu");
     if (attachmentBtn && uploadMenu) {
@@ -331,6 +327,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
+    // Image Upload Buttons
     const uploadImageBtn = document.getElementById("uploadImageBtn");
     const imageInput = document.getElementById("imageInput");
     const removeImageBtn = document.getElementById("removeImageBtn");
@@ -353,7 +350,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // Hero orb click -> activate app
+    // Hero Orb
     const auraOrb = document.getElementById("auraOrb");
     if (auraOrb) {
         const triggerHero = (e) => {
@@ -366,19 +363,13 @@ document.addEventListener("DOMContentLoaded", () => {
         auraOrb.addEventListener("keypress", triggerHero);
     }
 
-    // Login orb inside input bar -> open login options
+    // Login Orb
     const loginOrb = document.getElementById("loginOrb");
     if (loginOrb) {
-        loginOrb.addEventListener("click", () => {
-            const overlay = document.getElementById("login-overlay");
-            if(overlay) {
-                overlay.classList.remove("hidden");
-                showLoginStep(2);
-            }
-        });
+        loginOrb.addEventListener("click", showLoginModal);
     }
 
-    // Modal A-orb -> transition from step1 to step2
+    // Login Modal: Step 1 -> Step 2
     const loginHeroOrb = document.getElementById("loginHeroOrb");
     if (loginHeroOrb) {
         const triggerModalOrb = (e) => {
@@ -390,6 +381,16 @@ document.addEventListener("DOMContentLoaded", () => {
         loginHeroOrb.addEventListener("click", triggerModalOrb);
         loginHeroOrb.addEventListener("keypress", triggerModalOrb);
     }
+    
+    // Login Submit Action (Step 2 Button)
+    const loginStep2 = document.getElementById("login-step-2");
+    if (loginStep2) {
+        const btn = loginStep2.querySelector("button");
+        if(btn) {
+            btn.addEventListener("click", (e) => {
+                e.preventDefault();
+                loginUser();
+            });
+        }
+    }
 });
-
-
